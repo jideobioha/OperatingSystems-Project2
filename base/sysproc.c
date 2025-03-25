@@ -125,6 +125,6 @@ sys_fork_winner(void){
     }
     
    
-   return 0; // doesn't reach   
+   return 0; // doesn't reach. don't exit here   
 
 }
