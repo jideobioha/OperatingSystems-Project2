@@ -113,21 +113,18 @@ int sys_enable_sched_trace(void)
   return 0;
 }
 
+
+extern int w;
 int
 sys_fork_winner(void){
 
-    int w;
     
+    // passing user arg choice into kernel space via system call
     if (argint(0, &w) < 0){
        return -1; // return -1 if we fail to get arg from userspace wrapper   
     }
-   
-    if(w == 1){
-        yield(); // if w == 1 parent process (that we are in) yields control of the
-		 // CPU for the child. 
-    }
     
-   exit();
+   
    return 0; // doesn't reach   
 
 }

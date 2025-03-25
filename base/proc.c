@@ -179,6 +179,8 @@ growproc(int n)
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
+
+int w; // holds the choice of child-first or parent-first policy
 int
 fork(void)
 {
@@ -217,7 +219,10 @@ fork(void)
   acquire(&ptable.lock);
   np->state = RUNNABLE;
   release(&ptable.lock);
-
+  
+  if (w == 1){ // we want child-first policy
+     yield(); // give control of cpu to child
+  }
   return pid;
 }
 
