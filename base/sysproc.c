@@ -128,3 +128,16 @@ sys_fork_winner(void){
    return 0; // doesn't reach. don't exit here   
 
 }
+
+
+extern int schedMode;
+int 
+sys_set_scehd(void){
+    
+    // passing arg choice into kernel space
+    if (argint(0, &schedMode) < 0){
+        return -1; // return -1 if we fail to get arg from userspace wrapper
+    }
+
+    return 0;
+}
