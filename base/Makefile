@@ -178,7 +178,7 @@ UPROGS=\
 	_zombie\
 	_shutdown \
 	_fork_rc_test \
-	_schedtest \
+	_schdtest \
 	
 
 fs.img: mkfs README $(UPROGS)
