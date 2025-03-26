@@ -114,25 +114,25 @@ int sys_enable_sched_trace(void)
 }
 
 
-extern int w;
+extern int childFirst;
 int
 sys_fork_winner(void){
 
     
     // passing user arg choice into kernel space via system call
-    if (argint(0, &w) < 0){
+    if (argint(0, &childFirst) < 0){
        return -1; // return -1 if we fail to get arg from userspace wrapper   
     }
     
    
-   return 0; // doesn't reach. don't exit here   
+   return 0; // better to return here than to exit to not accidentally kill process.   
 
 }
 
 
 extern int schedMode;
 int 
-sys_set_scehd(void){
+sys_set_sched(void){
     
     // passing arg choice into kernel space
     if (argint(0, &schedMode) < 0){
