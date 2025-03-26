@@ -141,3 +141,15 @@ sys_set_sched(void){
 
     return 0;
 }
+
+extern int pidOfOtherProcess;
+int
+sys_tickets_owned(void){
+
+    if (argint (0, &pidOfOtherProcess) < 0){
+         return -1; // return 01 if we fail to get arg from userspace wrapper    
+    }
+
+
+    return 0;
+}
