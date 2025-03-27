@@ -366,9 +366,9 @@ scheduler(void)
         }
     
         release(&ptable.lock);
-    } //else { // we want the scheduler to use stride scheduler algorithm 
+    } else { // we want the scheduler to use stride scheduler algorithm 
        /*STRIDE SCHEDULER STUFF */
-   // }
+    }
     if (ran == 0){
         halt();
     }
@@ -570,3 +570,57 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+int 
+GetTickets(int processPid, int* found){ // helper function for tickets_owned system call
+		                        // returns # of tickets of process given the PID of the process
+
+    int processTickets;
+    acquire(&ptable.lock);
+
+    // iterate through process table (table of all processes on the OS)
+    for (struct proc* p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if (p->pid == processPid){
+	    processTickets = p->tickets;
+	    *found = 1; // we found it
+	}
+    }
+
+    release(&ptable.lock);
+
+    return  *found == 1 ? processTickets : -1 ; // only return the number of tickets of process, 
+						// p if we found it
+}
+
+int 
+DoTransfer(int receiverPid, int ticketsToTransfer){
+
+    struct proc* callingProc = myproc(); // instantiate calling process
+    
+    if (ticketsToTransfer > callingProc->tickets - 1){
+         cprintf("Process not allowed to send that many tickets. \n");
+         return -2;
+    
+    }
+
+    // iterate through process table
+    acquire(&ptable.lock);
+    for (struct proc* p = ptable.proc ; p < &ptable.proc[NPROC]; p++){
+        if (p->pid == receiverPid){ // receiver found
+	    p->tickets += ticketsToTransfer; // gains tickets transferred
+            callingProc->tickets -= ticketsToTransfer; // loses the tickets it transfers
+	   
+	    // RECALCULATING STRIDE VALUES
+	    // receiver
+	    p->stride = (100 * 10) / p->tickets;
+	    
+	   // sender
+	   callingProc->stride = (100 * 10) / callingProc->tickets; 
+
+	}
+    }
+    release(&ptable.lock);
+    
+    return callingProc->tickets; // returns amount of tickets of caller after transfer
+}
+

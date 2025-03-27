@@ -130,7 +130,8 @@ sys_fork_winner(void){
 }
 
 
-extern int schedMode;
+extern int schedMode; // we use externs because there is a global variable declared somewhere else but used here.
+		      // was not declared within the scope of this system call but in another file
 int 
 sys_set_sched(void){
     
@@ -142,14 +143,56 @@ sys_set_sched(void){
     return 0;
 }
 
-extern int pidOfOtherProcess;
+
 int
 sys_tickets_owned(void){
+    
+    int pidOfProcess;
+    int processTickets;
+    int found = 0; //did we find the process with the specified pid?
+    if (argint (0, &pidOfProcess) < 0){
+         return -1; // return -1 if we fail to get arg from userspace wrapper    
+    }
+    
+    processTickets = GetTickets(pidOfProcess, &found);
 
-    if (argint (0, &pidOfOtherProcess) < 0){
-         return -1; // return 01 if we fail to get arg from userspace wrapper    
+    if (!found){
+        cprintf("Process (%d) not found. \n", pidOfProcess);
+    }
+
+    return processTickets; // returns -1 if process wasn't found
+}
+
+int 
+sys_transfer_tickets(void){
+    int pidReceiver, ticketsToTransfer;
+
+    if (argint(0, &pidReceiver) < 0){
+        cprintf("failed to get the pid of the receiving process.\n");
+	return -1;
+    }
+
+    if (argint(1, &ticketsToTransfer) < 0){
+        cprintf("failed to get the number of tickets to transfer. \n");
+	return -1;
+    
+    }
+
+    if (ticketsToTransfer < 0){
+        cprintf("must transfer a positive number of tickets.\n");
+	return -1;
     }
 
 
-    return 0;
+    int foundReceiver = 0, receiverTickets;
+    receiverTickets = GetTickets(pidReceiver, &foundReceiver);
+
+    if (!foundReceiver){
+        cprintf("Receiving process not found. \n");
+	return -3;
+    }
+
+    int senderTickets = DoTransfer(pidReceiver, ticketsToTransfer); // does transfer and returns updated # of tickets in caller
+
+    return senderTickets;
 }
