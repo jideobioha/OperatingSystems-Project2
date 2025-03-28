@@ -122,6 +122,7 @@ void            wakeup(void*);
 void            yield(void);
 int             GetTickets(int, int*);
 int             DoTransfer(int, int);
+void            ResetStride(void);
 
 
 // swtch.S
@@ -191,3 +192,6 @@ void            clearpteu(pde_t *pgdir, char *uva);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+// max number of tickets for stride scheduler
+#define STRIDE_TOTAL_TICKETS 100

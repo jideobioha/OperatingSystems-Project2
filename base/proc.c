@@ -223,6 +223,8 @@ fork(void)
   if (childFirst == 1){ // we want child-first policy
      yield(); // give control of cpu to child
   }
+
+  // reset stride, tickets and pass of all processes
   return pid;
 }
 
@@ -265,6 +267,9 @@ exit(void)
         wakeup1(initproc);
     }
   }
+
+  // needs to reset stride parameters if process exits
+  ResetStride();
 
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
@@ -367,12 +372,60 @@ scheduler(void)
     
         release(&ptable.lock);
     } else { // we want the scheduler to use stride scheduler algorithm 
-       /*STRIDE SCHEDULER STUFF */
+       /*STRIDE SCHEDULER POLICY */
+       acquire(&ptable.lock);
+       ran = 0;
+       for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+           if (p->state != RUNNABLE){  continue;  }
+           ran = 1; 
+       }
+       
+       struct proc* chosenProcess = 0;
+       int chosenPass;
+       for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+           if(chosenProcess == 0 || p->pass < chosenProcess->pass  ){
+	       chosenProcess = p;
+	       chosenPass = p->pass;
+	   }
+       }
+
+       int minCount = 0; // checking to ensure there aren't multiple processes with minimum pass values
+       for (p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+           if (p->pass == chosenPass){
+	       minCount++;
+	   }
+       }
+
+       if (minCount > 1){
+       // iterate through processes with with minimum pass, only update chosen if pid of iterator process < chosenp
+	   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+	       if (p->pass == chosenPass && p->pid < chosenProcess->pid){
+	           chosenProcess = p;
+	       }
+	   }
+       }
+
+       if (ran == 1){
+           //switching to chosen process
+           c->proc = chosenProcess;
+           switchuvm(chosenProcess);
+           chosenProcess->state = RUNNING;
+
+           swtch( &(c->scheduler), chosenProcess->context );
+           switchkvm();
+
+           //  process done running for now
+           c->proc = 0;
+       }
+
+       release(&ptable.lock);
+
     }
+
+
     if (ran == 0){
         halt();
     }
-
     
   }
 
@@ -612,7 +665,7 @@ DoTransfer(int receiverPid, int ticketsToTransfer){
 	   
 	    // RECALCULATING STRIDE VALUES
 	    // receiver
-	    p->stride = (100 * 10) / p->tickets;
+	    p->stride = (STRIDE_TOTAL_TICKETS * 10) / p->tickets;
 	    
 	   // sender
 	   callingProc->stride = (100 * 10) / callingProc->tickets; 
@@ -624,3 +677,30 @@ DoTransfer(int receiverPid, int ticketsToTransfer){
     return callingProc->tickets; // returns amount of tickets of caller after transfer
 }
 
+
+void
+ResetStride(void){ // purpose of this function is to reset stride parameters whenever a fork happens
+
+    int count = 0; // counts RUNNABLE OR RUNNING processes
+    
+    // iterate through process table to count the number of active processes
+    acquire(&ptable.lock);
+    for (struct proc* p = ptable.proc; p < &ptable.proc[NPROC]; p++ ){
+        if(p->state == RUNNABLE || p->state == RUNNING){
+	    count++;
+	}
+    }
+    release(&ptable.lock);
+
+    // iterate through process table to update active processes' stride parameters
+    acquire(&ptable.lock);
+    for (struct proc* p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if (p -> state == RUNNABLE || p->state == RUNNING){
+	    p->tickets = STRIDE_TOTAL_TICKETS / count;
+            p->stride =  (STRIDE_TOTAL_TICKETS * 10) / p->tickets;
+	    p->pass = 0;
+	
+	}    
+    }
+    release(&ptable.lock);
+}
