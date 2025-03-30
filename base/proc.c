@@ -185,7 +185,6 @@ int
 fork(void)
 {
   
-  cprintf("entered fork");
   int i, pid;
   struct proc *np;
   struct proc *curproc = myproc();
@@ -221,15 +220,15 @@ fork(void)
   acquire(&ptable.lock);
   np->state = RUNNABLE;
   release(&ptable.lock);
+
   
   if (childFirst == 1){ // we want child-first policy
      yield(); // give control of cpu to child
   }
-  
 
-  cprintf("exited fork");
-  // reset stride, tickets and pass of all processes
+  // reset stride, tickets, and pass of all processes
   ResetStride();
+ 
 
   return pid;
 }
@@ -241,7 +240,6 @@ void
 exit(void)
 {
   
-  cprintf("entered exit");
   struct proc *curproc = myproc();
   struct proc *p;
   int fd;
@@ -261,6 +259,10 @@ exit(void)
   iput(curproc->cwd);
   end_op();
   curproc->cwd = 0;
+  
+
+  // need to reset stride parameters if process exits
+  ResetStride();
 
   acquire(&ptable.lock);
 
@@ -276,15 +278,11 @@ exit(void)
     }
   }
 
-  // needs to reset stride parameters if process exits
-  ResetStride();
-
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
   sched();
   panic("zombie exit");
 
-  cprintf("exited exit\n");
 }
 
 // Wait for a child process to exit and return its pid.
