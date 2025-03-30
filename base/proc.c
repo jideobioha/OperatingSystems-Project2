@@ -180,10 +180,12 @@ growproc(int n)
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
 
-int childFirst; // holds the choice of child-first or parent-first policy
+extern int childFirst; // holds the choice of child-first or parent-first policy
 int
 fork(void)
 {
+  
+  cprintf("entered fork");
   int i, pid;
   struct proc *np;
   struct proc *curproc = myproc();
@@ -223,8 +225,12 @@ fork(void)
   if (childFirst == 1){ // we want child-first policy
      yield(); // give control of cpu to child
   }
+  
 
+  cprintf("exited fork");
   // reset stride, tickets and pass of all processes
+  ResetStride();
+
   return pid;
 }
 
@@ -234,6 +240,8 @@ fork(void)
 void
 exit(void)
 {
+  
+  cprintf("entered exit");
   struct proc *curproc = myproc();
   struct proc *p;
   int fd;
@@ -275,6 +283,8 @@ exit(void)
   curproc->state = ZOMBIE;
   sched();
   panic("zombie exit");
+
+  cprintf("exited exit\n");
 }
 
 // Wait for a child process to exit and return its pid.
@@ -330,7 +340,7 @@ wait(void)
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
 
-int schedMode; // holds whether we want scheduler to run in RR or Stride
+extern int schedMode; // holds whether we want scheduler to run in RR or Stride
 void
 scheduler(void)
 {
@@ -375,53 +385,41 @@ scheduler(void)
        /*STRIDE SCHEDULER POLICY */
        acquire(&ptable.lock);
        ran = 0;
-       for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-           if (p->state != RUNNABLE){  continue;  }
-           ran = 1; 
-       }
-       
        struct proc* chosenProcess = 0;
-       int chosenPass;
+       int chosenPass = 500000; // set chosen pass to an arbitrarily large number
+       
        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-           if(chosenProcess == 0 || p->pass < chosenProcess->pass  ){
-	       chosenProcess = p;
-	       chosenPass = p->pass;
-	   }
+          if (p->state != RUNNABLE) { continue; } 
+          
+	  // we are iterating over valid processes only
+          if ( p->pass < chosenPass){
+	      chosenProcess = p;
+	      chosenPass = p->pass;
+	  } else if (p->pass == chosenPass){ //we found a process with the same pass [minimum] pass value
+	      if (p->pid < chosenProcess->pid){ // we want the process with the smaller pid
+	          chosenProcess = p;
+	      }
+	 }
        }
+	
+       if (chosenProcess){ // checking if chosen process is valid process
+           ran = 1;
+	   chosenProcess->pass += chosenProcess->stride;
+	  
+	   // switching to a chosen process
+	   c->proc = chosenProcess;
+	   switchuvm(chosenProcess);
+	   chosenProcess->state = RUNNING;
 
-       int minCount = 0; // checking to ensure there aren't multiple processes with minimum pass values
-       for (p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-           if (p->pass == chosenPass){
-	       minCount++;
-	   }
+	   swtch( &(c->scheduler), chosenProcess->context );
+	   switchkvm();
+
+	   c->proc = 0; // process is done running for now
        }
-
-       if (minCount > 1){
-       // iterate through processes with with minimum pass, only update chosen if pid of iterator process < chosenp
-	   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-	       if (p->pass == chosenPass && p->pid < chosenProcess->pid){
-	           chosenProcess = p;
-	       }
-	   }
-       }
-
-       if (ran == 1){
-           //switching to chosen process
-           c->proc = chosenProcess;
-           switchuvm(chosenProcess);
-           chosenProcess->state = RUNNING;
-
-           swtch( &(c->scheduler), chosenProcess->context );
-           switchkvm();
-
-           //  process done running for now
-           c->proc = 0;
-       }
-
+  
        release(&ptable.lock);
-
+       
     }
-
 
     if (ran == 0){
         halt();

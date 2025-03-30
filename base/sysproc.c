@@ -114,7 +114,7 @@ int sys_enable_sched_trace(void)
 }
 
 
-extern int childFirst;
+int childFirst;
 int
 sys_fork_winner(void){
 
@@ -130,7 +130,7 @@ sys_fork_winner(void){
 }
 
 
-extern int schedMode; // we use externs because there is a global variable declared somewhere else but used here.
+int schedMode;        // we use externs because there is a global variable declared somewhere else but used here.
 		      // was not declared within the scope of this system call but in another file
 int 
 sys_set_sched(void){
