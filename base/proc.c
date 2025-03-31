@@ -380,17 +380,18 @@ scheduler(void)
     
         release(&ptable.lock);
     } else { // we want the scheduler to use stride scheduler algorithm 
-       /*STRIDE SCHEDULER POLICY */
+       /*                     STRIDE SCHEDULER POLICY                   */
+
        acquire(&ptable.lock);
        ran = 0;
        struct proc* chosenProcess = 0;
-       int chosenPass = 500000; // set chosen pass to an arbitrarily large number
+       int chosenPass; // pass value of chosen process
        
        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
           if (p->state != RUNNABLE) { continue; } 
           
 	  // we are iterating over valid processes only
-          if ( p->pass < chosenPass){
+          if (chosenProcess == 0 || p->pass < chosenPass){
 	      chosenProcess = p;
 	      chosenPass = p->pass;
 	  } else if (p->pass == chosenPass){ //we found a process with the same pass [minimum] pass value
@@ -647,7 +648,7 @@ DoTransfer(int receiverPid, int ticketsToTransfer){
     struct proc* callingProc = myproc(); // instantiate calling process
     
     if (ticketsToTransfer > callingProc->tickets - 1){
-         cprintf("Process not allowed to send that many tickets. \n");
+         cprintf("\n\nWarning: Process not allowed to send that many tickets. \n\n");
          return -2;
     
     }
@@ -664,7 +665,7 @@ DoTransfer(int receiverPid, int ticketsToTransfer){
 	    p->stride = (STRIDE_TOTAL_TICKETS * 10) / p->tickets;
 	    
 	   // sender
-	   callingProc->stride = (100 * 10) / callingProc->tickets; 
+	   callingProc->stride = (STRIDE_TOTAL_TICKETS * 10) / callingProc->tickets; 
 
 	}
     }

@@ -179,7 +179,7 @@ sys_transfer_tickets(void){
     }
 
     if (ticketsToTransfer < 0){
-        cprintf("must transfer a positive number of tickets.\n");
+        cprintf("\n\nWarning: Must transfer a positive number of tickets. \n\n");
 	return -1;
     }
 
@@ -188,7 +188,7 @@ sys_transfer_tickets(void){
     receiverTickets = GetTickets(pidReceiver, &foundReceiver);
 
     if (!foundReceiver){
-        cprintf("Receiving process not found. \n");
+        cprintf("\n\nWarning: Receiving process not found.  \n\n");
 	return -3;
     }
 
